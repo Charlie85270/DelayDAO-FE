@@ -1,6 +1,5 @@
 "use client";
 
-import { Metadata } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,26 +9,23 @@ import { Proposals } from "@/components/dao/proposals";
 import Overview from "@/components/overview/overview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecentVotes } from "@/components/dao/recent-votes";
-import { Dialog } from "@radix-ui/react-dialog";
-import { useState } from "react";
-import {
-  CreateProposalDialog,
-  ProposalFormValues,
-} from "@/components/dialog/create-proposal-dialog";
-import { DialogTrigger } from "@/components/ui/dialog";
+
 import { PlusCircle } from "lucide-react";
+import { useRadix } from "../context/useRadix";
+import Profile from "@/components/profile/profile";
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") || "overview";
 
-  const [isOpenCreateProposal, setIsOpenCreateProposal] = useState(false);
+  const { state } = useRadix();
+
+  const isAccountConnected =
+    state?.accounts?.length && state?.accounts?.length > 0;
+
   const handleTabChange = (value: string) => {
     router.push(`?tab=${value}`);
-  };
-  const handleSubmitCreateProposal = (proposal?: ProposalFormValues) => {
-    console.log(proposal);
   };
 
   return (
@@ -38,18 +34,14 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">DELAY DAO</h2>
           <div className="flex items-center space-x-2">
-            <Dialog
-              open={isOpenCreateProposal}
-              onOpenChange={setIsOpenCreateProposal}
+            <Button
+              onClick={() => router.push("/proposal/new")}
+              size="default"
+              variant="outline"
+              className="gap-1"
             >
-              <CreateProposalDialog onSubmit={handleSubmitCreateProposal} />
-
-              <DialogTrigger asChild>
-                <Button size="default" variant="outline" className="gap-1">
-                  <PlusCircle className="h-3.5 w-3.5" /> Create a Proposal
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+              <PlusCircle className="h-3.5 w-3.5" /> Create a Proposal
+            </Button>
           </div>
         </div>
         <Tabs value={tab} onValueChange={handleTabChange} className="space-y-4">
@@ -57,8 +49,11 @@ export default function DashboardPage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="proposals">Proposals</TabsTrigger>
             <TabsTrigger value="votes">Votes</TabsTrigger>
-            <TabsTrigger value="notifications" disabled>
-              Notifications
+            <TabsTrigger
+              value="profile"
+              disabled={Boolean(!isAccountConnected)}
+            >
+              My profile
             </TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
@@ -83,6 +78,9 @@ export default function DashboardPage() {
                 <RecentVotes />
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="profile" className="space-y-4">
+            <Profile />
           </TabsContent>
         </Tabs>
       </div>

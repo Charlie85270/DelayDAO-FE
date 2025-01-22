@@ -23,6 +23,5 @@ export const useRadix = () => {
     throw new Error("useRdt must be used within a RdtProvider");
   }
 
-  console.log(state);
   return { rdt, state };
 };

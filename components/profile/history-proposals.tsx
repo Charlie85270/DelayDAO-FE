@@ -12,27 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Proposal } from "@/types/proposal";
+import { formatCurrency, getStatusColor } from "../dao/proposals";
 
-export const getStatusColor = (status: Proposal["status"]) => {
-  switch (status) {
-    case "approved":
-      return "bg-green-600/70 text-white hover:bg-green-500";
-    case "rejected":
-      return "bg-red-600/70 text-white hover:bg-red-500";
-    default:
-      return "bg-blue-600/70 text-white hover:bg-blue-500";
-  }
-};
-
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(amount);
-};
-
-export function Proposals() {
+export function HistoryProposals() {
   const router = useRouter();
 
   const handleRowClick = (id: number) => {
@@ -97,10 +79,8 @@ export function Proposals() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>ID</TableHead>
             <TableHead>Title</TableHead>
             <TableHead className="max-w-[300px]">Description</TableHead>
-            <TableHead>Amount</TableHead>
 
             <TableHead>Created At</TableHead>
             <TableHead>End Date</TableHead>
@@ -114,12 +94,10 @@ export function Proposals() {
               className="hover:bg-muted h-[70px] cursor-pointer"
               onClick={() => handleRowClick(proposal.id)}
             >
-              <TableCell>{proposal.id}</TableCell>
               <TableCell className="font-medium">{proposal.title}</TableCell>
               <TableCell className="max-w-[300px] truncate">
                 {proposal.description}
               </TableCell>
-              <TableCell>{formatCurrency(proposal.amount)}</TableCell>
 
               <TableCell>
                 {format(proposal.createdAt, "MMM dd, yyyy")}
