@@ -5,7 +5,7 @@ export const votingCardAddress = (): string => {
         return ""
     }
     else {
-        return "resource_tdx_2_1ngp0s9w7pghjg7lgugsyhl0skrwgn53h8axcrtczp3qcnwp46l3768"
+        return "resource_tdx_2_1ntf96cmnx42tjrwnkpz6m5em25wcrsa2da6v7dw95vusqdfy7wak9r"
     }
 }
 
@@ -14,7 +14,7 @@ export const daoAddress = (): string => {
         return ""
     }
     else {
-        return "component_tdx_2_1cpp4w22c4zshufe2atqqv37vycw66z3mw00d57cezdwsd5z84qenm0"
+        return "component_tdx_2_1cra9ztncpfakp9mkcf34k4fpqdygva5lppzyww4x8lvlncd8r2vjdd"
     }
 }
 
@@ -24,6 +24,6 @@ export const adminBadgeAddress = (): string => {
         return ""
     }
     else {
-        return "resource_tdx_2_1t460yx6c2wyrgexzcdgxm90s0unmnnmwe4a5w3de6s2r5z36r9p69m"
+        return "resource_tdx_2_1tk0xdx2anl3qplket6237g2k2eqdjxwnpvjw7latq3l8h9tkk2astg"
     }
 }

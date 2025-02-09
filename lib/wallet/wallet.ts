@@ -1,13 +1,14 @@
 
 import {RadixDappToolkit} from "@radixdlt/radix-dapp-toolkit";
-import {votingCardAddress} from "@/lib/constants";
+import {adminBadgeAddress, votingCardAddress} from "@/lib/constants";
 import {VotingCard, votingCardFrom} from "@/lib/wallet/voting-card";
 import {getVotingCardManifest} from "@/lib/wallet/rtm/get-voting-card";
 import {
-    createProposalMessage,
+    changeParametersMessage, collectFeesMessage,
+    createProposalMessage, depositMessage,
     getVotingCardMessage,
     lockResourcesMessage,
-    redeemResourcesMessage, sponsorProposalMessage, unlockResourcesMessage, voteProposalMessage
+    redeemResourcesMessage, sponsorProposalMessage, takeFromTreasuryMessage, unlockResourcesMessage, voteProposalMessage
 } from "@/lib/wallet/wallet-messages";
 import {createProposalManifest} from "@/lib/wallet/rtm/create-proposal";
 import {Proposition} from "@/lib/dao/proposal-types";
@@ -23,6 +24,10 @@ import {
     WalletInterface,
     WalletResult
 } from "@beaker-tools/typescript-toolkit";
+import {changeParametersManifest} from "@/lib/wallet/rtm/change-parameters";
+import {collectFeesManifest} from "@/lib/wallet/rtm/collect-fees";
+import {depositManifest} from "@/lib/wallet/rtm/deposit";
+import {takeFromTreasury} from "@/lib/wallet/rtm/take-from-treasury";
 
 
 export class Wallet {
@@ -35,12 +40,68 @@ export class Wallet {
         this._wallet = new WalletInterface(processor, toolkit, undefined, [votingCardAddress()], this.parseVotingCard,false);
     }
 
+    async updateWallet(): Promise<void> {
+        await this._wallet.updateTokens();
+        await this._wallet.updateNonFungibles();
+    }
+
+    isAdmin(): boolean {
+        return this._wallet.amountHeld(adminBadgeAddress()) > 0
+    }
+
     votingCard(): VotingCard | undefined {
         return this._votingCard;
     }
 
     wallet(): WalletInterface {
         return this._wallet
+    }
+
+    async changeParameters(
+        newSponsorshipPeriod: number | undefined,
+        newSponsorshipThreshold: number | undefined,
+        newVotingPeriod: number | undefined,
+        newVotingFee: number | undefined,
+        newCreationFee: number | undefined,
+        newDappDefinition: string | undefined
+    ): Promise<WalletResult> {
+       return await this.withCheckedAccount(
+           this.withCheckedAdmin(
+               this._wallet.sendTransaction(
+                   changeParametersManifest(
+                       this._wallet.account()!,
+                       newSponsorshipPeriod,
+                       newSponsorshipThreshold,
+                       newVotingPeriod,
+                       newVotingFee,
+                       newCreationFee,
+                       newDappDefinition
+                   ),
+                   changeParametersMessage(),
+                   defaultOnSuccess("Successfully changed dao parameters!")
+               )
+           )
+       )
+    }
+
+    async collectFees(
+        proposalAddress: string,
+    ): Promise<WalletResult> {
+        return await this.withCheckedAccount(
+            this.withCheckedAdmin(
+                this._wallet.sendTransaction(
+                    collectFeesManifest(this._wallet.account()!, proposalAddress),
+                    collectFeesMessage(),
+                    async (_) => {
+                        await this._wallet.updateTokens();
+                        return {
+                            outcome: "SUCCESS",
+                            message: "Successfully collected fees from proposal!"
+                        }
+                    }
+                )
+            )
+        )
     }
 
     async createProposal(proposalName: string, proposalDescription: string, propositions: Proposition[], creationFee: Fungibles): Promise<WalletResult> {
@@ -51,6 +112,23 @@ export class Wallet {
                     createProposalMessage(proposalName),
                     defaultOnSuccess("Successfully created your proposal!")
                 )
+            )
+        )
+    }
+
+    async deposit(fungibles: Fungibles[], nonFungibles: NonFungibles[]): Promise<WalletResult> {
+        return await this.withCheckedAccount(
+            this._wallet.sendTransaction(
+                depositManifest(this._wallet.account()!, fungibles, nonFungibles),
+                depositMessage(),
+                async (_) => {
+                    if(fungibles.length > 0) { await this._wallet.updateTokens(); }
+                    if(nonFungibles.length > 0) { await this._wallet.updateNonFungibles(); }
+                    return {
+                        outcome: "SUCCESS",
+                        message: "Successfully deposited resources to DAO!"
+                    }
+                }
             )
         )
     }
@@ -125,6 +203,25 @@ export class Wallet {
         )
     }
 
+    async takeFromTreasury(fungibles: Fungibles[], nonFungibles: NonFungibles[]): Promise<WalletResult> {
+        return await this.withCheckedAccount(
+            this.withCheckedAdmin(
+                this._wallet.sendTransaction(
+                    takeFromTreasury(this._wallet.account()!, fungibles, nonFungibles),
+                    takeFromTreasuryMessage(),
+                    async (_) => {
+                        if(fungibles.length > 0) { await this._wallet.updateTokens(); }
+                        if(nonFungibles.length > 0) { await this._wallet.updateNonFungibles(); }
+                        return {
+                            outcome: "SUCCESS",
+                            message: "Successfully deposited resources to DAO!"
+                        }
+                    }
+                )
+            )
+        )
+    }
+
     async unlockResources(): Promise<WalletResult>  {
         return await this.withCheckedAccount(
             this.withVotingCard(
@@ -169,6 +266,19 @@ export class Wallet {
             return {
                 outcome: 'FAILED',
                 message: 'Cannot do this while not connected!',
+            };
+        } else {
+            return transaction;
+        }
+    }
+
+    private async withCheckedAdmin(
+        transaction: Promise<WalletResult>,
+    ): Promise<WalletResult> {
+        if (!this.isAdmin()) {
+            return {
+                outcome: 'FAILED',
+                message: 'You are not an administrator!',
             };
         } else {
             return transaction;
